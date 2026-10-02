@@ -12,7 +12,13 @@ export async function createEmailService(env){
     if(adminEmail)deliveries.push(transporter.sendMail({from,to:adminEmail,...adminOrderEmail({order,customer})}));
     if(!deliveries.length)return {sent:false,reason:'no_recipients'};
     const results=await Promise.allSettled(deliveries);const sent=results.filter(result=>result.status==='fulfilled').length;
-    for(const result of results)if(result.status==='rejected')console.error('Entrega de correo fallida:',result.reason?.message);
+    for(const [index,result] of results.entries()){
+      if(result.status==='rejected')console.error('Entrega de correo fallida:',result.reason?.message);
+      else if(SMTP_HOST==='smtp.ethereal.email'){
+        const previewUrl=nodemailer.getTestMessageUrl(result.value);
+        if(previewUrl)console.info(`[Ethereal] Vista previa del mensaje ${index+1}/${results.length}: ${previewUrl}`);
+      }
+    }
     return {sent:sent===deliveries.length,delivered:sent,attempted:deliveries.length,reason:sent===deliveries.length?undefined:'partial_delivery'};
   }};
 }
